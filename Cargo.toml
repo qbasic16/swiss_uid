@@ -11,7 +11,9 @@ keywords = ["swiss", "uid", "ustid", "mwst", "mehrwertsteuer"]
 readme = "README.md"
 repository = "https://github.com/qbasic16/swiss_uid/"
 homepage = "https://github.com/qbasic16/swiss_uid/"
+include = ["/src/**", "/tests/**"]
 
 [dependencies]
-itertools = "0.12.*"
+itertools = "0.13.*"
+rand = "0.8.5"
 regex = "1.10.*"
