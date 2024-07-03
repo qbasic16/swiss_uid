@@ -27,7 +27,10 @@ fn test_invalid_format() {
     let uid = SwissUid::new("CH-109.322.552");
     assert_eq!(uid.is_err(), true);
     let uid = uid.unwrap_err();
-    assert_eq!(format!("{}", uid), "Invalid format: 'CH-109.322.552'");
+    assert_eq!(
+        format!("{}", uid),
+        "Invalid format: Prefix must be 'CHE' or 'ADM'"
+    );
 }
 
 #[test]
@@ -37,7 +40,7 @@ fn test_invalid_prefix() {
     let uid = uid.unwrap_err();
     assert_eq!(
         format!("{}", uid),
-        "Invalid format: 'ABC' prefix must be 'CHE' or 'ADM'"
+        "Invalid format: Prefix must be 'CHE' or 'ADM'"
     );
 }
 
@@ -56,7 +59,7 @@ fn test_mismatched_checkdigit() {
     let uid = uid.unwrap_err();
     assert_eq!(
         format!("{}", uid),
-        "Mismatched check digit: 'CHE-109.322.55[2]' should have the check digit [1]"
+        "Mismatched check digit: Calculated check digit is [1]"
     );
 }
 
