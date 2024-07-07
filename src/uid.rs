@@ -117,7 +117,7 @@ impl SwissUid {
     }
 
     #[deprecated(
-        since = "1.1.0",
+        since = "1.0.1",
         note = "Use `swiss_uid::uid::calculate_checkdigit()` instead"
     )]
     pub fn checkdigit(&self) -> Result<u8, UidError> {
