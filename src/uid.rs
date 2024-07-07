@@ -43,12 +43,12 @@ pub fn calculate_checkdigit(
 /// let uid: SwissUid = "CHE-109.322.551".parse().unwrap();
 /// assert!(uid.is_ok());
 /// ```
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct SwissUid {
-    a: u16,
-    b: u16,
-    p: u16,
-    pfx: UidPrefix,
+    pub(self) a: u16,
+    pub(self) b: u16,
+    pub(self) p: u16,
+    pub(self) pfx: UidPrefix,
 }
 
 impl SwissUid {
@@ -226,13 +226,8 @@ impl fmt::Display for SwissUid {
     }
 }
 
-impl PartialEq for SwissUid {
-    fn eq(&self, other: &Self) -> bool {
-        self.pfx == other.pfx && self.a == other.a && self.b == other.b && self.p == other.p
-    }
-}
-
-impl Eq for SwissUid {}
+unsafe impl Send for SwissUid {}
+unsafe impl Sync for SwissUid {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UidPrefix {
@@ -291,21 +286,42 @@ mod test {
         let uid = SwissUid::new("CHE-109.322.551");
         assert_eq!(uid.is_ok(), true);
         let uid = uid.unwrap();
+        assert_eq!(uid.pfx, UidPrefix::CHE);
+        assert_eq!(uid.a, 0x1093);
+        assert_eq!(uid.b, 0x2255);
+        assert_eq!(uid.p, 1);
         assert_eq!(uid.to_string(), "CHE-109.322.551");
         assert_eq!(uid.to_string_hr(), "CHE-109.322.551 HR");
         assert_eq!(uid.to_string_mwst(), "CHE-109.322.551 MWST");
         assert_eq!(format!("{}", uid), "CHE-109.322.551");
         assert_eq!(format!("{:?}", uid), "CHE-109.322.55[1]");
-        assert_eq!(uid.checkdigit(), Ok(1));
+    }
+
+    #[test]
+    fn test_valid_uid_parse() {
+        let uid: SwissUid = "CHE-109.322.551".parse().unwrap();
+        assert_eq!(uid.pfx, UidPrefix::CHE);
+        assert_eq!(uid.a, 0x1093);
+        assert_eq!(uid.b, 0x2255);
+        assert_eq!(uid.p, 1);
+        assert_eq!(uid.to_string(), "CHE-109.322.551");
+    }
+
+    #[test]
+    fn test_valid_uid_rand() {
+        let uid = SwissUid::rand();
+        assert_eq!(uid.is_ok(), true);
+        let uid = uid.unwrap();
+        assert_eq!(uid.pfx, UidPrefix::CHE);
+        assert_eq!(uid.to_string().len(), 15);
     }
 
     #[test]
     fn test_valid_uid_adm() {
-        let uid = SwissUid::new("CHE-109.322.551");
+        let uid = SwissUid::new("ADM-109.322.551");
         assert_eq!(uid.is_ok(), true);
         let uid = uid.unwrap();
-        assert_eq!(uid.to_string(), "CHE-109.322.551");
-        assert_eq!(uid.checkdigit(), Ok(1));
+        assert_eq!(uid.to_string(), "ADM-109.322.551");
     }
 
     #[test]

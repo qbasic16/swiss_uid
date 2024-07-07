@@ -1,6 +1,6 @@
 [package]
 name = "swiss_uid"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 resolver = "2"
 authors = ["Peter <qbasic16@gmail.com>"]
@@ -16,4 +16,3 @@ include = ["/src/**", "/tests/**"]
 [dependencies]
 itertools = "0.13.*"
 rand = "0.8.5"
-regex = "1.10.*"
