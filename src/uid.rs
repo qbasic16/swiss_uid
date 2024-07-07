@@ -1,7 +1,6 @@
 use std::{error::Error, fmt, str::FromStr};
 
 use itertools::Itertools;
-use rand::Rng;
 
 use crate::utils::{ToQuadNibble, ToSplitQuadNibble};
 
@@ -32,16 +31,14 @@ pub fn calculate_checkdigit(
 /// ```rust
 /// use swiss_uid::uid::SwissUid;
 ///
-/// let uid = SwissUid::new("CHE-109.322.551");
-/// assert!(uid.is_ok());
-/// let uid = uid.unwrap();
+/// let uid = SwissUid::new("CHE-109.322.551").unwrap();
 /// assert_eq!(format!("{:?}", uid), "CHE-109.322.55[1]".to_owned());
 /// assert_eq!(format!("{}", uid), "CHE-109.322.551".to_owned());
 /// assert_eq!(uid.to_string_mwst(), "CHE-109.322.551 MWST".to_owned());
 /// assert_eq!(uid.to_string_hr(), "CHE-109.322.551 HR".to_owned());
 ///
-/// let uid: SwissUid = "CHE-109.322.551".parse().unwrap();
-/// assert!(uid.is_ok());
+/// let uid2: SwissUid = "CHE-109.322.551".parse().unwrap();
+/// assert_eq!(uid2.to_string().len(), 15);
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct SwissUid {
@@ -70,8 +67,8 @@ impl SwissUid {
     /// ```rust
     /// use swiss_uid::uid::SwissUid;
     ///
-    /// let uid = SwissUid::new("CHE-109.322.551");
-    /// assert!(uid.is_ok());
+    /// let uid = SwissUid::new("CHE-109.322.551").unwrap();
+    /// assert_eq!(format!("{}", uid), "CHE-109.322.551".to_owned());
     /// ```
     pub fn new(uid: &str) -> Result<Self, UidError> {
         uid.parse()
@@ -84,9 +81,12 @@ impl SwissUid {
     /// use swiss_uid::uid::SwissUid;
     ///
     /// let uid = SwissUid::rand().unwrap();
-    /// assert!(uid.is_ok());
+    /// assert_eq!(uid.to_string().len(), 15);
     /// ```
+    #[cfg(feature = "rand")]
     pub fn rand() -> Result<Self, Box<dyn Error>> {
+        use rand::Rng as _;
+
         let mut rng = rand::thread_rng();
         let mut n = [0u8; Self::NUM_CHARS_DIGITS];
         let mut n_iter = n.iter_mut();
@@ -307,6 +307,7 @@ mod test {
         assert_eq!(uid.to_string(), "CHE-109.322.551");
     }
 
+    #[cfg(feature = "rand")]
     #[test]
     fn test_valid_uid_rand() {
         let uid = SwissUid::rand();

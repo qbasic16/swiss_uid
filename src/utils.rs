@@ -1,4 +1,5 @@
-pub trait ToSplitQuadNibble<T>: Copy {
+/// Utility trait for converting between bytes and nibbles
+pub(crate) trait ToSplitQuadNibble<T>: Copy {
     fn to_split_quad_nibble(self) -> T;
 }
 
@@ -7,9 +8,7 @@ impl ToSplitQuadNibble<[u8; 4]> for u16 {
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use swiss_uid::utils::ToSplitQuadNibble;
-    ///
+    /// ```ignore
     /// let n: u16 = 0x1234;
     /// let n_split = n.to_split_quad_nibble();
     /// assert_eq!(n_split, [1, 2, 3, 4]);
@@ -31,9 +30,7 @@ impl ToSplitQuadNibble<[u8; 8]> for (u16, u16) {
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use swiss_uid::utils::ToSplitQuadNibble;
-    ///
+    /// ```ignore
     /// let n: (u16, u16) = (0x1234, 0x5678);
     /// let n_split = n.to_split_quad_nibble();
     /// assert_eq!(n_split, [1, 2, 3, 4, 5, 6, 7, 8]);
@@ -54,22 +51,20 @@ impl ToSplitQuadNibble<[u8; 8]> for (u16, u16) {
     }
 }
 
-pub trait ToQuadNibble {
+pub(crate) trait ToQuadNibble {
     fn to_quad_nibble(self) -> u16;
 }
 
 impl ToQuadNibble for &[u8] {
-    #[inline]
     /// Convert 4 bytes into a u16 number, nibbles from left (MSB) to right (LSB).
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use swiss_uid::utils::ToQuadNibble;
-    ///
-    /// let n = [11, 12, 13, 14];
+    /// ```ignore
+    /// let n: &[u8] = &[11, 12, 13, 14];
     /// let n_quad = n.to_quad_nibble();
     /// assert_eq!(n_quad, 0xbcde);
+    #[inline]
     fn to_quad_nibble(self) -> u16 {
         if self.len() < 4 {
             return 0;
