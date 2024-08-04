@@ -170,6 +170,9 @@ impl FromStr for SwissUid {
         if digits.len() != Self::NUM_CHARS_DIGITS + 1 {
             return Err(UidError::InvalidFormat("UID must have 9 digits".to_owned()));
         }
+        if digits[0] == 0 {
+            return Err(UidError::LeadingZeroNotAllowed);
+        }
 
         // Get the 8 digits
         let mut n = [0u8; Self::NUM_CHARS_DIGITS];
@@ -204,7 +207,7 @@ impl fmt::Debug for SwissUid {
 
         write!(
             f,
-            "{}-{:x}.{:x}{:x}.{:x}[{}]",
+            "{}-{:03x}.{:x}{:02x}.{:02x}[{}]",
             self.pfx, a012, a3, b01, b23, self.p
         )
     }
@@ -220,7 +223,7 @@ impl fmt::Display for SwissUid {
 
         write!(
             f,
-            "{}-{:x}.{:x}{:x}.{:x}{}",
+            "{}-{:03x}.{:x}{:02x}.{:02x}{}",
             self.pfx, a012, a3, b01, b23, self.p
         )
     }
@@ -259,6 +262,8 @@ impl fmt::Display for UidPrefix {
 pub enum UidError {
     /// Malformed Swiss UID string format
     InvalidFormat(String),
+    /// Leading zero is not allowed in the UID
+    LeadingZeroNotAllowed,
     /// The calculated check digit is in the invalid range, no UID can have this check digit
     InvalidCheckDigit(String),
     /// The calculated check digit of the first 8 digits does not match the given 9th digit (right)
@@ -271,6 +276,7 @@ impl fmt::Display for UidError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             UidError::InvalidFormat(s) => write!(f, "Invalid format: {}", s),
+            UidError::LeadingZeroNotAllowed => write!(f, "Leading zero is not allowed"),
             UidError::InvalidCheckDigit(s) => write!(f, "Invalid check digit: {}", s),
             UidError::MismatchedCheckDigit(s) => write!(f, "Mismatched check digit: {}", s),
         }
@@ -307,6 +313,18 @@ mod test {
         assert_eq!(uid.to_string(), "CHE-109.322.551");
     }
 
+    #[test]
+    fn test_valid_uid_with_zeroes() {
+        let uid = SwissUid::new("CHE-100.002.005");
+        assert_eq!(uid.is_ok(), true);
+        let uid = uid.unwrap();
+        assert_eq!(uid.pfx, UidPrefix::CHE);
+        assert_eq!(uid.a, 0x1000);
+        assert_eq!(uid.b, 0x0200);
+        assert_eq!(uid.p, 5);
+        assert_eq!(uid.to_string(), "CHE-100.002.005");
+    }
+
     #[cfg(feature = "rand")]
     #[test]
     fn test_valid_uid_rand() {
@@ -314,7 +332,7 @@ mod test {
         assert_eq!(uid.is_ok(), true);
         let uid = uid.unwrap();
         assert_eq!(uid.pfx, UidPrefix::CHE);
-        assert_eq!(uid.to_string().len(), 15);
+        assert_eq!(uid.to_string().len(), 15, "{}", uid);
     }
 
     #[test]
@@ -326,7 +344,7 @@ mod test {
     }
 
     #[test]
-    fn test_invalid_format() {
+    fn test_incomplete_prefix() {
         let uid = SwissUid::new("CH-109.322.552");
         assert_eq!(uid.is_err(), true);
         let uid = uid.unwrap_err();
@@ -337,7 +355,7 @@ mod test {
     }
 
     #[test]
-    fn test_invalid_prefix() {
+    fn test_unknown_prefix() {
         let uid = SwissUid::new("ABC-109.322.551");
         assert_eq!(uid.is_err(), true);
         let uid = uid.unwrap_err();
@@ -348,11 +366,22 @@ mod test {
     }
 
     #[test]
+    fn test_leading_zero_not_allowed() {
+        let uid = SwissUid::new("CHE-010.322.557");
+        assert_eq!(uid.is_err(), true, "{:?}", uid);
+        let uid = uid.unwrap_err();
+        assert_eq!(format!("{:?}", uid), "LeadingZeroNotAllowed");
+    }
+
+    #[test]
     fn test_invalid_checkdigit() {
-        let uid = SwissUid::new("CHE-000.002.000");
+        let uid = SwissUid::new("CHE-100.002.000");
         assert_eq!(uid.is_err(), true);
         let uid = uid.unwrap_err();
-        assert_eq!(format!("{:?}", uid), "InvalidCheckDigit(\"10\")");
+        assert_eq!(
+            format!("{:?}", uid),
+            "MismatchedCheckDigit(\"Calculated check digit is [5]\")"
+        );
     }
 
     #[test]
