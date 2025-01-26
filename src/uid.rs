@@ -1,25 +1,29 @@
-use std::{error::Error, fmt, str::FromStr};
+use ::std::{error::Error, fmt, str::FromStr};
 
-use itertools::Itertools;
+use ::itertools::Itertools;
 
-use crate::utils::{ToQuadNibble, ToSplitQuadNibble};
+use crate::utils::IntoNibblesNum;
+
+// Factors as defined in the specification
+// See: http://www.ech.ch/de/ech/ech-0097/5.2 (section 2.4.2)
+const DIGIT_FACTORS: [u8; SwissUid::NUM_CHARS_DIGITS] = [5, 4, 3, 2, 7, 6, 5, 4];
 
 /// Calculates the check digit for the given 8 normal digits of the UID.
-pub fn calculate_checkdigit(
-    main_digits: &[u8; SwissUid::NUM_CHARS_DIGITS],
-) -> Result<u8, UidError> {
-    // Factors as defined in the specification
-    // See: http://www.ech.ch/de/ech/ech-0097/5.2 (section 2.4.2)
-    let multipliers: [u8; SwissUid::NUM_CHARS_DIGITS] = [5, 4, 3, 2, 7, 6, 5, 4];
-    let checksum = multipliers
-        .iter()
-        .zip_eq(main_digits.iter())
-        .map(|v| (v.0 * v.1) as u32)
-        .sum::<u32>();
-    match 11 - (checksum % 11) {
-        11 => Ok(0u8),
-        10 => Err(UidError::InvalidCheckDigit(10.to_string())),
-        n => Ok(n as u8),
+#[inline]
+pub fn calculate_checkdigit(main_digits: &[u8]) -> Result<u8, UidError> {
+    if main_digits.len() != DIGIT_FACTORS.len() {
+        Err(UidError::InvalidFormat("UID must have 8 digits".to_owned()))
+    } else {
+        let checksum: u32 = DIGIT_FACTORS
+            .iter()
+            .zip_eq(main_digits.iter())
+            .map(|v| (v.0 * v.1) as u32)
+            .sum();
+        match 11 - (checksum % 11) {
+            11 => Ok(0u8),
+            10 => Err(UidError::InvalidCheckDigit(10.to_string())),
+            n => Ok(n as u8),
+        }
     }
 }
 
@@ -84,8 +88,8 @@ impl SwissUid {
     /// assert_eq!(uid.to_string().len(), 15);
     /// ```
     #[cfg(feature = "rand")]
-    pub fn rand() -> Result<Self, Box<dyn Error>> {
-        use rand::Rng as _;
+    pub fn rand() -> Result<Self, UidError> {
+        use rand::Rng;
 
         let mut rng = rand::thread_rng();
         let mut n = [0u8; Self::NUM_CHARS_DIGITS];
@@ -110,18 +114,14 @@ impl SwissUid {
 
         Ok(Self {
             pfx: UidPrefix::CHE,
-            a: (&n[0..4]).to_quad_nibble(),
-            b: (&n[4..8]).to_quad_nibble(),
+            a: (&n[0..4]).into_nibbles_num(),
+            b: (&n[4..8]).into_nibbles_num(),
             p: p as u16,
         })
     }
 
-    #[deprecated(
-        since = "1.0.1",
-        note = "Use `swiss_uid::uid::calculate_checkdigit()` instead"
-    )]
-    pub fn checkdigit(&self) -> Result<u8, UidError> {
-        calculate_checkdigit(&(self.a, self.b).to_split_quad_nibble())
+    pub fn checkdigit(&self) -> u8 {
+        self.p as u8
     }
 
     /// Returns the UID as a string with the suffix " MWST" (Mehrwertsteuer).
@@ -174,26 +174,23 @@ impl FromStr for SwissUid {
             return Err(UidError::LeadingZeroNotAllowed);
         }
 
-        // Get the 8 digits
-        let mut n = [0u8; Self::NUM_CHARS_DIGITS];
-        n.copy_from_slice(&digits[..Self::NUM_CHARS_DIGITS]);
-
         // Get the check digit and calculate its counterpart from the first 8 digits
         let p = digits[Self::NUM_CHARS_DIGITS];
-        let p_calculated = calculate_checkdigit(&n)?;
-        if p_calculated == p {
-            Ok(Self {
-                pfx,
-                a: (&n[0..4]).to_quad_nibble(),
-                b: (&n[4..8]).to_quad_nibble(),
-                p: p as u16,
-            })
-        } else {
-            Err(UidError::MismatchedCheckDigit(format!(
-                "Calculated check digit is [{}]",
-                p_calculated
-            )))
-        }
+        calculate_checkdigit(&digits[..Self::NUM_CHARS_DIGITS]).and_then(|p_calculated| {
+            if p_calculated == p {
+                Ok(Self {
+                    pfx,
+                    a: (&digits[0..4]).into_nibbles_num(),
+                    b: (&digits[4..8]).into_nibbles_num(),
+                    p: p as u16,
+                })
+            } else {
+                Err(UidError::MismatchedCheckDigit(format!(
+                    "Calculated check digit is [{}]",
+                    p_calculated
+                )))
+            }
+        })
     }
 }
 
