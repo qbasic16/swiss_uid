@@ -1,6 +1,5 @@
+use ::std::iter::zip;
 use ::std::{error::Error, fmt, str::FromStr};
-
-use ::itertools::Itertools;
 
 use crate::utils::IntoNibblesNum;
 
@@ -11,19 +10,19 @@ const DIGIT_FACTORS: [u8; SwissUid::NUM_CHARS_DIGITS] = [5, 4, 3, 2, 7, 6, 5, 4]
 /// Calculates the check digit for the given 8 normal digits of the UID.
 #[inline]
 pub fn calculate_checkdigit(main_digits: &[u8]) -> Result<u8, UidError> {
-    if main_digits.len() != DIGIT_FACTORS.len() {
-        Err(UidError::InvalidFormat("UID must have 8 digits".to_owned()))
-    } else {
-        let checksum: u32 = DIGIT_FACTORS
-            .iter()
-            .zip_eq(main_digits.iter())
-            .map(|v| (v.0 * v.1) as u32)
-            .sum();
-        match 11 - (checksum % 11) {
-            11 => Ok(0u8),
-            10 => Err(UidError::InvalidCheckDigit(10.to_string())),
-            n => Ok(n as u8),
-        }
+    if main_digits.len() < DIGIT_FACTORS.len() {
+        return Err(UidError::InvalidFormat(
+            "UID must have at least 8 digits".to_owned(),
+        ));
+    }
+
+    let checksum: u32 = zip(main_digits, &DIGIT_FACTORS)
+        .map(|v| (v.0 * v.1) as u32)
+        .sum();
+    match 11 - (checksum % 11) {
+        11 => Ok(0u8),
+        10 => Err(UidError::InvalidCheckDigit(10.to_string())),
+        n => Ok(n as u8),
     }
 }
 
@@ -91,15 +90,15 @@ impl SwissUid {
     pub fn rand() -> Result<Self, UidError> {
         use rand::Rng;
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut n = [0u8; Self::NUM_CHARS_DIGITS];
         let mut n_iter = n.iter_mut();
 
         // The first digit must be between 1 and 9
-        *n_iter.next().unwrap() = rng.gen_range(1..10);
+        *n_iter.next().unwrap() = rng.random_range(1..10);
         // The rest can be between 0 and 9
         for d in n_iter {
-            *d = rng.gen_range(0..10);
+            *d = rng.random_range(0..10);
         }
 
         let p = calculate_checkdigit(&n).or_else(|_| {

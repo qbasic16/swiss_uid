@@ -5,10 +5,21 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+[1.1.1]: https://github.com/qbasic16/swiss_uid/releases/tag/1.1.1
 [1.1.0]: https://github.com/qbasic16/swiss_uid/releases/tag/1.1.0
 [1.0.2]: https://github.com/qbasic16/swiss_uid/releases/tag/1.0.2
 [1.0.1]: https://github.com/qbasic16/swiss_uid/releases/tag/1.0.1
 [1.0.0]: https://github.com/qbasic16/swiss_uid/releases/tag/1.0.0
+
+## [1.1.1] - 2025-04-26
+
+### Changed
+
+- Updated crate `rand` to `0.9.*`
+
+### Removed
+
+- Removed crates `itertools` and `num` to simplify dependencies
 
 ## [1.1.0] - 2025-01-26
 
